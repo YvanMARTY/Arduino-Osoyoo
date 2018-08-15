@@ -1,13 +1,27 @@
 #include <Servo.h>
-#include "IRremote.h"
 #include "configuration.h"
-#include "TM1637Display.h" 
+Servo head;
+
+#include <TM1637Display.h> 
 #define CLK 10 //can be any digital pin 
 #define DIO 3 //can be any digital pin
 TM1637Display display(CLK, DIO);
-Servo head;
+int segA = 0b00000001;
+int segB = 0b00000010;
+int segC = 0b00000100;
+int segD = 0b00001000;
+int segE = 0b00010000;
+int segF = 0b00100000;
+
+int Score_Joueur_1;
+int Score_Joueur_2;
+
+bool wait = true;
+uint8_t data[] = {0x0, 0x0, 0x0, 0x0};
+
+#include "IRremote.h"
 IRrecv IR(IR_PIN); //   IRrecv object  IR get code from IR remoter
-IRsend irsend(IR_em); //IRsend object IR 
+// IRsend irsend(IR_em); //IRsend object IR 
 decode_results IRresults;  
 
 /*motor control*/
@@ -89,12 +103,13 @@ void do_Uart_Tick()
       preUARTTick = preUARTTick - 200;
     }
   }
+  
   if(buffUARTIndex > 0 && (millis() - preUARTTick >= 100))//APP send flag to modify the obstacle avoidance parameters
   { //data ready
     buffUART[buffUARTIndex] = 0x00;
+    
     if(buffUART[0]=='C') 
     {
-      Serial.println(buffUART);
       Serial.println("You have modified the parameters!");//indicates that the obstacle avoidance distance parameter has been modified
       sscanf(buffUART,"CMD%d,%d,%d",&distancelimit,&sidedistancelimit,&turntime);
       // Serial.println(distancelimit);
@@ -130,7 +145,7 @@ void Depassement(){
 
     go_Back();
     set_Motorspeed(255,255);
-    delay(1000);klg
+    delay(1000);
     stop_Stop();
   }
   if(sensor[2] == 1 or sensor[3] == 1){
@@ -142,14 +157,13 @@ void Depassement(){
     delay(1000);
     stop_Stop();
   }
-  
 }
 
 //************************  Gestion Ir *********************************
 /*
- * Fonction qui commande la télécommande
- * pour chaque déplacement ou touche,
- * elle rappelle le dépassement 
+ * Fonction qui commande la tÃƒÂ©lÃƒÂ©commande
+ * pour chaque dÃƒÂ©placement ou touche,
+ * elle rappelle le dÃƒÂ©passement 
  */
 void do_IR_Tick()
 {
@@ -179,7 +193,8 @@ void do_IR_Tick()
     {
       //touche "ok" pour stop stop
         Drive_Num=STOP_STOP;
-    }else if(IRresults.value==IR_turnsmallleft)
+    }
+    else if(IRresults.value==IR_turnsmallleft)
     {
       //touche "#" pour demarrer la detection des obstacles automatique
       Drive_Status=AUTO_DRIVE_UO;
@@ -187,7 +202,8 @@ void do_IR_Tick()
     }
     else if(IRresults.value==IR_one)
     {
-      //touche "1" pour rénitialiser le score
+      //touche "1" pour rÃƒÂ©nitialiser le score
+      wait = false;
       display.setBrightness(0x0f);
       Display_Start();
     }else if(IRresults.value==IR_deux)
@@ -200,46 +216,44 @@ void do_IR_Tick()
 }
 
 /*
- * Fonction de mise à 1 l'emetteur IR
+ * Fonction de mise ÃƒÂ  1 l'emetteur IR
  */
- void IREmitterOn(){
-  irsend.mark(0); 
+void IREmitterOn(){
+  // irsend.mark(0); 
   pause(10); 
- }
-
+}
  /*
-  * Fonction de mise à 0 l'émetteur IR
+  * Fonction de mise ÃƒÂ  0 l'ÃƒÂ©metteur IR
   */
-  void IREmitterOff(){
-    irsend.space(0); 
-    pause(60);
-  }
-
- void switchOffOnIREmitter() { 
-    IREmitterOff(); 
-    IREmitterOn(); 
-} 
-
+void IREmitterOff(){
+  // irsend.space(0); 
+  pause(60);
+}
+void switchOffOnIREmitter() { 
+  IREmitterOff(); 
+  IREmitterOn(); 
+}
 /*
  * cette fonction remplace le delay , car delay ne 
  * fonctionne pas dans les rappels d'interruption0
  */
   void pause(int ms)
   {
-    for (int i=o; i< ms; i++)
+    for (int i=0; i< ms; i++)
     {
       delayMicroseconds(1000);
     }
   }
 
-  /*
-   * Fonction pour tirer
-   */
-   void tir()
-   {
-    
-   }
-**************************************************************************
+/*
+ * Fonction pour tirer
+ */
+void tir()
+{
+  
+}
+/**************************************************************************/
+
 //car motor control
 void do_Drive_Tick()
 {
@@ -309,7 +323,7 @@ void do_Drive_Tick()
   }
   else if(Drive_Status==AUTO_DRIVE_LF)
   {
-    auto_tarcking();
+    /* auto_tarcking(); */
   }
   else if(Drive_Status==AUTO_DRIVE_UO)
   {
@@ -351,19 +365,24 @@ void do_Drive_Tick2()
     }
 }
 
-/********* Gestion de l'afficheur*********************/
-
+/******************** Gestion de l'afficheur ********************/
 void Display_on()/* Afficher tous */
 {
-  uint8_t data_on[] = { 0xff, 0xff, 0xff, 0xff };
-  display.setSegments(data_on);
+  data[0] = 0xff;
+  data[1] = 0xff;
+  data[2] = 0xff;
+  data[3] = 0xff;
+  display.setSegments(data);
 }
 void Display_off() /* eteindre tous */  
 {
-  uint8_t data_off[] = {0x0, 0x0, 0x0, 0x0};
-  display.setSegments(data_off);
+  data[0] = 0x0;
+  data[1] = 0x0;
+  data[2] = 0x0;
+  data[3] = 0x0;
+  
+  display.setSegments(data);
 }
-
 void Display_Center()
 {
   uint8_t segto;
@@ -371,15 +390,79 @@ void Display_Center()
   display.setSegments(&segto, 1, 1);
 }
 
-int Score_Joueur_1;
-int Score_Joueur_2;
+int time2 = 0;
+void Display_Wait(int timeloop)
+{
+  if(wait)
+  {
+    if(timeloop != time2){
+      time2 = timeloop;
+      switch (data[0])
+      {
+        case 0x0:
+          data[0] = segA;
+          data[1] = segA;
+          data[2] = segA;
+          data[3] = segA;
+          break;
+        case 0b00000001:
+          data[0] = segB;
+          data[1] = segB;
+          data[2] = segB;
+          data[3] = segB;
+          break;
+        case 0b00000010:
+          data[0] = segC;
+          data[1] = segC;
+          data[2] = segC;
+          data[3] = segC;
+          break;
+        case 0b00000100:
+          data[0] = segD;
+          data[1] = segD;
+          data[2] = segD;
+          data[3] = segD;
+          break;
+        case 0b00001000:
+          data[0] = segE;
+          data[1] = segE;
+          data[2] = segE;
+          data[3] = segE;
+          break;
+        case 0b00010000:
+          data[0] = segF;
+          data[1] = segF;
+          data[2] = segF;
+          data[3] = segF;
+          break;
+        case 0b00100000:
+          data[0] = segA;
+          data[1] = segA;
+          data[2] = segA;
+          data[3] = segA;
+          break;
+      }
+      display.setSegments(data);
+    }
+    
+    
+  }
+}
 
 void Display_Start()
 {
-
   Display_off();
   Score_Joueur_1 = 0;
-  Score_Joueur_2 = 0;  
+  Score_Joueur_2 = 0;
+
+  for (int i=0; i< 3; i++)
+  {
+    Display_on();
+    delay(500);
+    Display_off();
+    delay(500);
+  }
+  
   display.showNumberDec(Score_Joueur_1,false);
   Display_Center();
   display.showNumberDec(Score_Joueur_2,false,1,0);
@@ -395,10 +478,10 @@ void Add_Joueur_1()
 }
 
 /*
- * Ici  je considère que c'est la fonction qui incrémente le 
+ * Ici  je considÃƒÂ¨re que c'est la fonction qui incrÃƒÂ©mente le 
  * score du joueur 2
- * je rajoute alarm(), car si touché , il faut émettre un bip 
- * avant de rénitialiser affichage
+ * je rajoute alarm(), car si touchÃƒÂ© , il faut ÃƒÂ©mettre un bip 
+ * avant de rÃƒÂ©nitialiser affichage
  */
 void Add_Joueur_2()
 {
@@ -409,10 +492,10 @@ void Add_Joueur_2()
   Display_Center();
   display.showNumberDec(Score_Joueur_1,false);
 }
-*************************************************************
+
+
 void setup()
 {
-
   pinMode(dir1PinL, OUTPUT); 
   pinMode(dir2PinL, OUTPUT); 
   pinMode(speedPinL, OUTPUT);  
@@ -426,9 +509,9 @@ void setup()
 
   //ir remote
   Serial.begin(9600);
-  IR.enableIRIn();    
+  IR.enableIRIn(); 
 
-  irsend.enableIROut(38);
+  // irsend.enableIROut(38);
   IREmitterOn();
   //end of ir remote
 
@@ -437,29 +520,32 @@ void setup()
   pinMode(BUZZ_PIN, OUTPUT);
   buzz_OFF();  
 
+  /*
   pinMode(LFSensor_0,INPUT);
   pinMode(LFSensor_1,INPUT);
   pinMode(LFSensor_2,INPUT);
   pinMode(LFSensor_3,INPUT);
-  pinMode(IR_em,OUTPUT); 
- 
+  pinMode(LFSensor_4,INPUT);
+  */
+  
   Serial.begin(9600);//In order to fit the Bluetooth module's default baud rate, only 9600
   digitalWrite(Trig_PIN,LOW);
   head.attach(SERVO_PIN); //servo
   head.write(90);
- 
-  display.setBrightness(0x0f);
   
-  Display_Start();
+  
+  display.setBrightness(0x0f);
 }
 
 void loop()
 {
+  Display_Wait(millis()/100);
   do_Uart_Tick();
   do_IR_Tick(); //ir remote
   do_Drive_Tick();
   do_Drive_Tick2();
 }
+
 
 
 

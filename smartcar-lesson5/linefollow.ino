@@ -1,5 +1,7 @@
 /*read line folloe sensors*/
 
+/*
+
 String read_sensor_values()
 {   int sensorvalue=32;
   sensor[0]= digitalRead(LFSensor_0);
@@ -10,8 +12,8 @@ String read_sensor_values()
  
   sensor[3]=digitalRead(LFSensor_3);
  
-  //sensor[4]=digitalRead(LFSensor_4);
-  sensorvalue +=sensor[0]*16+sensor[1]*8+sensor[2]*4+sensor[3]*2; //+sensor[4];
+  sensor[4]=digitalRead(LFSensor_4);
+  sensorvalue +=sensor[0]*16+sensor[1]*8+sensor[2]*4+sensor[3]*2+sensor[4];
  
   String senstr= String(sensorvalue,BIN);
   return senstr.substring(1,6);
@@ -42,5 +44,7 @@ void auto_tarcking(){
     }
 
 }
+
+*/
 
 

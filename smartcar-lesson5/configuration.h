@@ -12,24 +12,31 @@
 #define IR_em A3 //IR emission signal
 
 /*From left to right, connect to D3,A1-A3 ,D10*/
- 
+/* 
+#define LFSensor_0  3 
+#define LFSensor_1 A1
+#define LFSensor_2 A2
+#define LFSensor_3 A3
+#define LFSensor_4 10 
+*/
+
 /* Capteur depassement ligne */
 /*
- * Les capteurs avants sont liés à A1
- * Les capteurs arrières à A0
+ * Capteurs avants : A1
+ * Capteurs arriÃƒÂ¨res : A0
  */
-#define LFSensor_0  A1
-#define LFSensor_1  A1
-#define LFSensor_2  A0
-#define LFSensor_3  A0
+#define LFSensor_0 A1 
+#define LFSensor_1 A1
+#define LFSensor_2 A0
+#define LFSensor_3 A0
 
 //decode remote signal
 /*
- * ils suffit de prendre un define et de le paraméter dans le smartac-lesson5 pour
- * mettre une action sur le bouton qui intéresse
+ * ils suffit de prendre un define et de le paramÃƒÂ©ter dans le smartac-lesson5 pour
+ * mettre une action sur le bouton qui intÃƒÂ©resse
  */
- #define IR_ADVANCE       0x00FF18E7       //code from IR controller "▲" button
- #define IR_BACK          0x00FF4AB5       //code from IR controller "▼" button
+ #define IR_ADVANCE       0x00FF18E7       //code from IR controller "Ã¢â€“Â²" button
+ #define IR_BACK          0x00FF4AB5       //code from IR controller "Ã¢â€“Â¼" button
  #define IR_RIGHT         0x00FF5AA5       //code from IR controller ">" button
  #define IR_LEFT          0x00FF10EF       //code from IR controller "<" button
  #define IR_STOP          0x00FF38C7       //code from IR controller "OK" button
@@ -52,7 +59,7 @@
 #define Echo_PIN   12 // Ultrasonic Echo pin connect to D11
 #define Trig_PIN   11  // Ultrasonic Trig pin connect to D12
 
-#define BUZZ_PIN  A2  //buzzer was connect to D13
+#define BUZZ_PIN     A2  //buzzer connect to D13
 
 int sensor[5];
 #define AD_SPEED1   150  //avoidance motor speed
@@ -97,4 +104,6 @@ enum DN
   STOP_STOP,
   DEF
 }Drive_Num=DEF;
+
+
 

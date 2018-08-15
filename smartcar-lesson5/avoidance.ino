@@ -1,5 +1,5 @@
 /*detection of ultrasonic distance*/
-//alarm désactivé , penser à le remettre 
+//alarm dÃƒÂ©sactivÃƒÂ© , penser ÃƒÂ  le remettre 
 int watch(){
   long howfar;
   digitalWrite(Trig_PIN,LOW);
@@ -123,4 +123,6 @@ void auto_avoidance(){
     thereis=0;
   }
 }
+
+
 
