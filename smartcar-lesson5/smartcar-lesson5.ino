@@ -122,6 +122,8 @@ void do_Uart_Tick()
 
   switch (Uart_Date)    //serial control instructions
   {
+
+    case '7': tir(); break;
     case '2':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_ADVANCE;Serial.println("forward"); break;
     case '4':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_LEFT; Serial.println("turn left");break;
     case '6':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_RIGHT; Serial.println("turn right");break;
@@ -250,7 +252,7 @@ void switchOffOnIREmitter() {
  */
 void tir()
 {
-  
+  Serial.println("TIIIIIR");
 }
 /**************************************************************************/
 
