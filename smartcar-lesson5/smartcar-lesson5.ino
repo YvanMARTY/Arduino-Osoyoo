@@ -4,7 +4,7 @@ Servo head;
 
 #include <TM1637Display.h> 
 #define CLK 10 //can be any digital pin 
-#define DIO 3 //can be any digital pin
+#define DIO A3 //can be any digital pin
 TM1637Display display(CLK, DIO);
 int segA = 0b00000001;
 int segB = 0b00000010;
@@ -17,11 +17,12 @@ int Score_Joueur_1;
 int Score_Joueur_2;
 
 bool wait = true;
+
 uint8_t data[] = {0x0, 0x0, 0x0, 0x0};
 
 #include "IRremote.h"
 IRrecv IR(IR_PIN); //   IRrecv object  IR get code from IR remoter
-// IRsend irsend(IR_em); //IRsend object IR 
+IRsend irsend; //IRsend object IR 
 decode_results IRresults;  
 
 /*motor control*/
@@ -122,8 +123,6 @@ void do_Uart_Tick()
 
   switch (Uart_Date)    //serial control instructions
   {
-
-    case '7': tir(); break;
     case '2':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_ADVANCE;Serial.println("forward"); break;
     case '4':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_LEFT; Serial.println("turn left");break;
     case '6':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_RIGHT; Serial.println("turn right");break;
@@ -131,6 +130,7 @@ void do_Uart_Tick()
     case '5':Drive_Status=MANUAL_DRIVE; Drive_Num=STOP_STOP;buzz_OFF();Serial.println("stop");break;
     case '3':Drive_Status=AUTO_DRIVE_UO; Serial.println("avoid obstacles...");break;
     case '1':Drive_Status=AUTO_DRIVE_LF; Serial.println("line follow...");break;
+    case '7': tir(); break;
     default:break;
   }
 }
@@ -222,15 +222,22 @@ void do_IR_Tick()
  */
 void IREmitterOn(){
   // irsend.mark(0); 
-  pause(10); 
+  //pause(10);
+  digitalWrite(IR_em, HIGH);
+  alarm();
+  Serial.println("Led Activée"); 
 }
  /*
   * Fonction de mise ÃƒÂ  0 l'ÃƒÂ©metteur IR
   */
 void IREmitterOff(){
   // irsend.space(0); 
-  pause(60);
+  //pause(60);
+  digitalWrite(IR_em, LOW);
+  alarm();
+  Serial.println("Led désactivée"); 
 }
+
 void switchOffOnIREmitter() { 
   IREmitterOff(); 
   IREmitterOn(); 
@@ -252,7 +259,18 @@ void switchOffOnIREmitter() {
  */
 void tir()
 {
-  Serial.println("TIIIIIR");
+  Serial.println("TIRRRRR");
+  if(Serial.read() != -1)
+  {
+    for(int i = 0; i<3; i++){
+      irsend.sendNEC(0x00ff01fe,32);
+      delay(40);
+      
+    }
+  }
+   alarm();
+   irsend.space(0); 
+   pause(60);
 }
 /**************************************************************************/
 
@@ -522,25 +540,18 @@ void setup()
   pinMode(BUZZ_PIN, OUTPUT);
   buzz_OFF();  
 
-  /*
-  pinMode(LFSensor_0,INPUT);
-  pinMode(LFSensor_1,INPUT);
-  pinMode(LFSensor_2,INPUT);
-  pinMode(LFSensor_3,INPUT);
-  pinMode(LFSensor_4,INPUT);
-  */
-  
+
   Serial.begin(9600);//In order to fit the Bluetooth module's default baud rate, only 9600
   digitalWrite(Trig_PIN,LOW);
   head.attach(SERVO_PIN); //servo
   head.write(90);
-  
-  
+   
   display.setBrightness(0x0f);
 }
 
 void loop()
 {
+  
   Display_Wait(millis()/100);
   do_Uart_Tick();
   do_IR_Tick(); //ir remote

@@ -9,7 +9,7 @@
 #define speedPinR 5    // Needs to be a PWM pin to be able to control motor speed
 
 #define IR_PIN  13 //IR receiver Signal pin connect to Arduino pin 3
-#define IR_em A3 //IR emission signal
+#define IR_em 3 //IR emission signal
 
 /*From left to right, connect to D3,A1-A3 ,D10*/
 /* 
