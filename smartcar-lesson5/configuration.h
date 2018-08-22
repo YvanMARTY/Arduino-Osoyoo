@@ -91,7 +91,7 @@ unsigned long preUARTTick = 0;
 enum DS
 {
   MANUAL_DRIVE,
-  AUTO_DRIVE_LF, //line follow
+  AUTO_DRIVE_LF, // mode combat
   AUTO_DRIVE_UO  //ultrasonic obstruction
 }Drive_Status=MANUAL_DRIVE;
 
