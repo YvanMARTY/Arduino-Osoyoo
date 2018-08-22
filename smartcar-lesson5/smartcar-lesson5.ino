@@ -17,6 +17,7 @@ int Score_Joueur_1;
 int Score_Joueur_2;
 
 bool wait = true;
+bool capteur_depassement = false;
 
 uint8_t data[] = {0x0, 0x0, 0x0, 0x0};
 
@@ -88,6 +89,7 @@ void do_Uart_Tick()
 {
 
   char Uart_Date=0;
+
   if(Serial.available()) 
   {
     size_t len = Serial.available();
@@ -121,6 +123,7 @@ void do_Uart_Tick()
     buffUARTIndex = 0;
   }
 
+  
   switch (Uart_Date)    //serial control instructions
   {
     case '2':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_ADVANCE;Serial.println("forward"); break;
@@ -129,8 +132,14 @@ void do_Uart_Tick()
     case '8':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_BACK; Serial.println("go back");break;
     case '5':Drive_Status=MANUAL_DRIVE; Drive_Num=STOP_STOP;buzz_OFF();Serial.println("stop");break;
     case '3':Drive_Status=AUTO_DRIVE_UO; Serial.println("avoid obstacles...");break;
-    case '1':Drive_Status=AUTO_DRIVE_LF; Serial.println("line follow...");break;
-    case '7': tir(); break;
+    // case '1':Drive_Status=AUTO_DRIVE_LF; Serial.println("mode combat...");break;
+    case '1':Drive_Status=MANUAL_DRIVE; Drive_Num=MODE_COMBAT; Serial.println("mode combat...");break;
+    case 'E':Drive_Status=MANUAL_DRIVE; Drive_Num=TIR; Serial.println("Tir");break;
+    // case 'E':tir();break;
+    case 'K':Serial.println("Activer Emmetteur");break;
+    case 'Y':Serial.println("Desactiver Emmetteur");break;
+    case 'C': Display_Start(); Serial.println("Réinitialiser le score");break;
+    
     default:break;
   }
 }
@@ -141,24 +150,28 @@ void Depassement(){
   sensor[2]= digitalRead(LFSensor_2);
   sensor[3]= digitalRead(LFSensor_3);
 
-  if(sensor[0] == 1 or sensor[1] == 1){
-    stop_Stop();
-    delay(5000); /* 5 secondes */
-
-    go_Back();
-    set_Motorspeed(255,255);
-    delay(1000);
-    stop_Stop();
+  if(capteur_depassement == true)
+  {
+    if(sensor[0] == 1 or sensor[1] == 1){
+      stop_Stop();
+      delay(5000); /* 5 secondes */
+  
+      go_Back();
+      set_Motorspeed(255,255);
+      delay(1000);
+      stop_Stop();
+    }
+    if(sensor[2] == 1 or sensor[3] == 1){
+      stop_Stop();
+      delay(5000); /* 5 secondes */
+  
+      go_Advance();
+      set_Motorspeed(255,255);
+      delay(1000);
+      stop_Stop();
+    }
   }
-  if(sensor[2] == 1 or sensor[3] == 1){
-    stop_Stop();
-    delay(5000); /* 5 secondes */
-
-    go_Advance();
-    set_Motorspeed(255,255);
-    delay(1000);
-    stop_Stop();
-  }
+  
 }
 
 //************************  Gestion Ir *********************************
@@ -211,6 +224,7 @@ void do_IR_Tick()
     }else if(IRresults.value==IR_deux)
     {
       //touche "2" pour activer l'emetteur
+      tir();
     }
     IRresults.value = 0;
     IR.resume();
@@ -225,7 +239,7 @@ void IREmitterOn(){
   //pause(10);
   digitalWrite(IR_em, HIGH);
   alarm();
-  Serial.println("Led Activée"); 
+  Serial.println("Led activée"); 
 }
  /*
   * Fonction de mise ÃƒÂ  0 l'ÃƒÂ©metteur IR
@@ -259,15 +273,10 @@ void switchOffOnIREmitter() {
  */
 void tir()
 {
-  Serial.println("TIRRRRR");
-  if(Serial.read() != -1)
-  {
-    for(int i = 0; i<3; i++){
-      irsend.sendNEC(0x00ff01fe,32);
-      delay(40);
-      
-    }
-  }
+  irsend.sendJVC(0x00ff01fe,32,0);
+
+  IR.enableIRIn(); // Start the receiver
+
    alarm();
    irsend.space(0); 
    pause(60);
@@ -317,6 +326,10 @@ void do_Drive_Tick()
           stop_Stop();
           JogTime = 0;
           break;
+      case MODE_COMBAT:
+          stop_Stop();
+          JogTime = 0;
+          break;
       default:
           break;
     }
@@ -341,9 +354,14 @@ void do_Drive_Tick()
       }
     }
   }
-  else if(Drive_Status==AUTO_DRIVE_LF)
+  else if(Drive_Status==AUTO_DRIVE_LF) // modification avec le mode combat
   {
     /* auto_tarcking(); */
+    
+    wait = false;
+    display.setBrightness(0x0f);
+    Display_Start();
+    
   }
   else if(Drive_Status==AUTO_DRIVE_UO)
   {
@@ -551,7 +569,6 @@ void setup()
 
 void loop()
 {
-  
   Display_Wait(millis()/100);
   do_Uart_Tick();
   do_IR_Tick(); //ir remote

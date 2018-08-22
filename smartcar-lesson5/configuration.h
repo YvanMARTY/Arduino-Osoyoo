@@ -102,6 +102,8 @@ enum DN
   GO_RIGHT,
   GO_BACK,
   STOP_STOP,
+  TIR,
+  MODE_COMBAT,
   DEF
 }Drive_Num=DEF;
 
