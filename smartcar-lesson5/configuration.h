@@ -104,6 +104,8 @@ enum DN
   STOP_STOP,
   TIR,
   MODE_COMBAT,
+  ACTIVE,
+  DESACTIVE,
   DEF
 }Drive_Num=DEF;
 

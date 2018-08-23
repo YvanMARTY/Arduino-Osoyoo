@@ -7,13 +7,14 @@ Servo head;
 #define DIO A3 //can be any digital pin
 TM1637Display display(CLK, DIO);
 
+int Nb_Capteur;
 int Score_Joueur_1;
-int Score_Joueur_2;
 
 char Uart_Date=0;
  
 bool wait = true; // pour afficher la boucle du debut
 bool capteur_depassement = false; // pour activer les capteurs du dessous
+bool capteur_active = false; 
 
 uint8_t data[] = {0x0, 0x0, 0x0, 0x0};
 
@@ -96,6 +97,7 @@ void do_Uart_Tick()
     memcpy(buffUART + buffUARTIndex, sbuf, len);//ensure that the serial port can read the entire frame of data
     buffUARTIndex += len;
     preUARTTick = millis();
+    
     if(buffUARTIndex >= MAX_PACKETSIZE - 1) 
     {
       buffUARTIndex = MAX_PACKETSIZE - 2;
@@ -127,17 +129,17 @@ void do_Uart_Tick()
     case '8':Drive_Status=MANUAL_DRIVE; Drive_Num=GO_BACK; Serial.println("go back");break;
     case '5':Drive_Status=MANUAL_DRIVE; Drive_Num=STOP_STOP;buzz_OFF();Serial.println("stop");break;
     case '3':Drive_Status=AUTO_DRIVE_UO; Serial.println("avoid obstacles...");break;
-    // case '1':Drive_Status=AUTO_DRIVE_LF; Serial.println("line follow...");break;
     case '1':Drive_Status=MANUAL_DRIVE; Drive_Num=MODE_COMBAT; Serial.println("mode combat...");break;
     case 'E':Drive_Status=MANUAL_DRIVE; Drive_Num=TIR; Serial.println("Tir"); break;
-    // case 'E':tir();break;
-    //case 'K':Serial.println("Activer Emmetteur");break;
-    //case 'Y':Serial.println("Desactiver Emmetteur");break;
-    case 'R': Init_Score(); Serial.println("Réinitialiser le score");break;
-    
+    case 'K':Drive_Status=MANUAL_DRIVE; Drive_Num=ACTIVE; Serial.println("Activer Emmetteur");break;
+    case 'Y':Drive_Status=MANUAL_DRIVE; Drive_Num=DESACTIVE; Serial.println("Desactiver Emmetteur");break;
+    case 'R':Init_Score(); Serial.println("Réinitialiser le score");break;
+    case 'F':Display_End(); Serial.println("Temps ecoule");break;
+   
     default:break;
   }
-   Uart_Date=0;
+  do_IR_Tick();
+  Uart_Date=0;
 }
 
 void Depassement(){
@@ -205,26 +207,35 @@ void do_IR_Tick()
       //touche "ok" pour stop stop
         Drive_Num=STOP_STOP;
     }
+    else if(IRresults.value==IR_one)
+    {
+      //touche "1" pour mode combat
+      display.setBrightness(0x0f);
+      Display_Start();
+    }
+    else if(IRresults.value==IR_deux)
+    {
+      //touche "2" pour activer l'emetteur
+      tir();
+    }
+    else if(IRresults.value==IR_nine)
+    {
+      //touche "#" pour passer en mode libre
+      Display_End();
+    }
+    else if(IRresults.value==IR_asterix)
+    {
+      Add_Joueur_1();
+    }
+    else if(IRresults.value==IR_zero)
+    {
+      Init_Score();
+    }
     else if(IRresults.value==IR_turnsmallleft)
     {
       //touche "#" pour demarrer la detection des obstacles automatique
       Drive_Status=AUTO_DRIVE_UO;
       Depassement();
-    }
-    else if(IRresults.value==IR_one)
-    {
-      //touche "1" pour rÃƒÂ©nitialiser le score
-      wait = false;
-      display.setBrightness(0x0f);
-      Display_Start();
-    }else if(IRresults.value==IR_deux)
-    {
-      //touche "2" pour activer l'emetteur
-      //tir();
-    }
-    else if(IRresults.value==IR_asterix)
-    {
-      Add_Joueur_2();
     }
     IRresults.value = 0;
     IR.resume();
@@ -232,24 +243,26 @@ void do_IR_Tick()
 }
 
 /*
- * Fonction de mise ÃƒÂ  1 l'emetteur IR
+ * Fonction de mise ON  l'emetteur IR
  */
 void IREmitterOn(){
+  capteur_active = true;
   // irsend.mark(0); 
   //pause(10);
   digitalWrite(IR_em, HIGH);
-  alarm();
-  Serial.println("Led activee"); 
+ // alarm();
+  Serial.println("led active"); 
 }
  /*
-  * Fonction de mise ÃƒÂ  0 l'ÃƒÂ©metteur IR
+  * Fonction de mise OFF  l'emetteur IR
   */
 void IREmitterOff(){
+  capteur_active = false;
   // irsend.space(0); 
   //pause(60);
   digitalWrite(IR_em, LOW);
   alarm();
-  Serial.println("Led désactivée"); 
+  Serial.println("led desactive"); 
 }
 
 void switchOffOnIREmitter() { 
@@ -273,8 +286,8 @@ void pause(int ms)
  */
 void tir()
 {
-  irsend.sendJVC(0x00ff01fe,32,0);
-  alarm();
+  irsend.sendJVC(IR_asterix,32,0);
+  IR.enableIRIn();
 }
 /**************************************************************************/
 
@@ -322,14 +335,23 @@ void do_Drive_Tick()
           stop_Stop();
           JogTime = 0;
           break;
+      case MODE_COMBAT:
+          Display_Start();
+          stop_Stop();
+          JogTime=0;
+          break;
       case TIR: 
           tir();
           stop_Stop();
           JogTime=0;
-          Serial.println("tir terminee");
           break;
-      case MODE_COMBAT:
-          Display_Start();
+      case ACTIVE: 
+          IREmitterOn();
+          stop_Stop();
+          JogTime=0;
+          break;
+      case DESACTIVE: 
+          IREmitterOff();
           stop_Stop();
           JogTime=0;
           break;
@@ -487,10 +509,17 @@ void Display_Start() // lancer une partie de combat avec les règles (depassemen
 {
   wait = false;
   capteur_depassement = true;
+
+  if(capteur_active == true){
+    Nb_Capteur = 1;
+  }
+  else{
+    Nb_Capteur = 0;
+  }
+  
   Score_Joueur_1 = 0;
-  Score_Joueur_2 = 0;
   Display_off();
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 2; i++)
   {
     Display_on();
     alarm();
@@ -503,12 +532,13 @@ void Display_Start() // lancer une partie de combat avec les règles (depassemen
   delay(600);
   buzz_OFF();
   
-  display.showNumberDec(Score_Joueur_1,false);
+  display.showNumberDec(Nb_Capteur,false);
   Display_Center();
-  display.showNumberDec(Score_Joueur_2,false,1,0);
+  display.showNumberDec(Score_Joueur_1,false,1,0);
 }
 
 void Display_End(){
+  Serial.println("Terminee");
   for (int i = 0; i < 3; i++)
   {
     Display_on();
@@ -533,38 +563,23 @@ void Init_Score(){ // juste mettre à 0 les scores
   buzz_OFF();
   Display_off();
   Score_Joueur_1 = 0;
-  Score_Joueur_2 = 0;
 
-  display.showNumberDec(Score_Joueur_1,false);
+  display.showNumberDec(Nb_Capteur,false);
   Display_Center();  
-  display.showNumberDec(Score_Joueur_2,false,1,0);
+  display.showNumberDec(Score_Joueur_1,false,1,0);
 }
 
 void Add_Joueur_1()
 {
+  alarm(); /* car si touchee, il faut emmettre un bip */
   Display_off();
   Score_Joueur_1 = Score_Joueur_1 + 1;
 
-  display.showNumberDec(Score_Joueur_1,false);
-  Display_Center();  
-  display.showNumberDec(Score_Joueur_2,false,1,0);
-
-  if(Score_Joueur_1 > 9){
-    Display_End();
-  }
-}
-
-void Add_Joueur_2()
-{
-  alarm(); /* car si touchee, il faut emmettre un bip */
-  Display_off();
-  Score_Joueur_2 = Score_Joueur_2 + 1;
-
-  display.showNumberDec(Score_Joueur_1,false);
+  display.showNumberDec(Nb_Capteur,false);
   Display_Center();
-  display.showNumberDec(Score_Joueur_2,false,1,0);
+  display.showNumberDec(Score_Joueur_1,false,1,0);
 
-  if(Score_Joueur_2 > 3){
+  if(Score_Joueur_1 > 3){
     Display_End();
   }
 }
@@ -600,7 +615,7 @@ void setup()
   digitalWrite(Trig_PIN,LOW);
   head.attach(SERVO_PIN); //servo
   head.write(90);
-   
+  
   display.setBrightness(0x0f);
 }
 
@@ -608,7 +623,6 @@ void loop()
 {
   Display_Wait(millis()/100);
   do_Uart_Tick();
-  
   do_IR_Tick(); //ir remote
   do_Drive_Tick();
   do_Drive_Tick2();
