@@ -13,6 +13,7 @@ int Score_Joueur_1;
 char Uart_Date=0;
  
 bool wait = true; // pour afficher la boucle du debut
+bool wait_emmetteur = false; // pour afficher la boucle et le nombre de emmetteur active
 bool capteur_depassement = false; // pour activer les capteurs du dessous
 bool capteur_active = false; 
 
@@ -172,12 +173,7 @@ void Depassement(){
   
 }
 
-//************************  Gestion Ir *********************************
-/*
- * Fonction qui commande la tÃƒÂ©lÃƒÂ©commande
- * pour chaque dÃƒÂ©placement ou touche,
- * elle rappelle le dÃƒÂ©passement 
- */
+//************************  Gestion Cateur Ir *********************************
 void do_IR_Tick()
 {
   if(IR.decode(&IRresults))
@@ -241,6 +237,7 @@ void do_IR_Tick()
     IR.resume();
   }
 }
+//************************  Fin Gestion Cateur Ir *********************************
 
 /*
  * Fonction de mise ON  l'emetteur IR
@@ -248,18 +245,18 @@ void do_IR_Tick()
 void IREmitterOn(){
   capteur_active = true;
   // irsend.mark(0); 
-  //pause(10);
+  // pause(10);
   digitalWrite(IR_em, HIGH);
- // alarm();
+  alarm();
   Serial.println("led active"); 
 }
- /*
-  * Fonction de mise OFF  l'emetteur IR
-  */
+/*
+ * Fonction de mise OFF  l'emetteur IR
+ */
 void IREmitterOff(){
   capteur_active = false;
   // irsend.space(0); 
-  //pause(60);
+  // pause(60);
   digitalWrite(IR_em, LOW);
   alarm();
   Serial.println("led desactive"); 
@@ -345,12 +342,16 @@ void do_Drive_Tick()
           stop_Stop();
           JogTime=0;
           break;
-      case ACTIVE: 
+      case ACTIVE:
+          wait = false;
+          wait_emmetteur = true;
           IREmitterOn();
           stop_Stop();
           JogTime=0;
           break;
-      case DESACTIVE: 
+      case DESACTIVE:
+          wait = true;
+          wait_emmetteur = false;
           IREmitterOff();
           stop_Stop();
           JogTime=0;
@@ -379,18 +380,18 @@ void do_Drive_Tick()
       }
     }
   }
-  else if(Drive_Status==AUTO_DRIVE_LF) // modification avec le mode combat
+  else if(Drive_Status==AUTO_DRIVE_LF) // mode combat
   {
     /* auto_tarcking(); */
     Display_Start();
   }
-  else if(Drive_Status==AUTO_DRIVE_UO)
+  else if(Drive_Status==AUTO_DRIVE_UO) // Mode evitement obstacle
   {
     auto_avoidance();
   }
 }
 
-/**************car control**************/
+/************** car control **************/
 void do_Drive_Tick2()
 {
     switch (Drive_Num) 
@@ -448,6 +449,7 @@ void Display_Center() /* les 2 points du centre */
   display.setSegments(&segto, 1, 1);
 }
 
+/********************************** Affichage Boucles **********************************/
 int time2 = 0;
 void Display_Wait(int timeloop)
 {
@@ -503,8 +505,68 @@ void Display_Wait(int timeloop)
       display.setSegments(data);
     }
   }
-}
+  else if(wait_emmetteur){
+    if(timeloop != time2){
+      time2 = timeloop;
 
+      switch (data[0])
+      {
+        case 0x0:
+          data[0] = SEG_A;
+          data[1] = SEG_A;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        case 0b00000001:
+          data[0] = SEG_B;
+          data[1] = SEG_B;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        case 0b00000010:
+          data[0] = SEG_C;
+          data[1] = SEG_C;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        case 0b00000100:
+          data[0] = SEG_D;
+          data[1] = SEG_D;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        case 0b00001000:
+          data[0] = SEG_E;
+          data[1] = SEG_E;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        case 0b00010000:
+          data[0] = SEG_F;
+          data[1] = SEG_F;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        case 0b00100000:
+          data[0] = SEG_A;
+          data[1] = SEG_A;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+        default:
+          data[0] = SEG_A;
+          data[1] = SEG_A;
+          data[2] = 0x0;
+          data[3] = 0b00000110;
+          break;
+      }
+      display.setSegments(data);
+    }
+  }
+}
+//****************************** Fin Affichage Boucle ********************************************
+
+//****************************** Lancement Partie en Mode Combat *********************************
 void Display_Start() // lancer une partie de combat avec les règles (depassement ligne)
 {
   wait = false;
@@ -537,6 +599,7 @@ void Display_Start() // lancer une partie de combat avec les règles (depassemen
   display.showNumberDec(Score_Joueur_1,false,1,0);
 }
 
+// ********************************* Fin de la Partie en mode combat ******************************
 void Display_End(){
   Serial.println("Terminee");
   for (int i = 0; i < 3; i++)
@@ -556,7 +619,7 @@ void Display_End(){
   capteur_depassement = false;
 }
 
-void Init_Score(){ // juste mettre à 0 les scores
+void Init_Score(){ // mettre à 0 les scores et afficher le nombre de emmeteur (en mode combat)
   Display_on();
   buzz_ON();
   delay(600);
@@ -569,7 +632,7 @@ void Init_Score(){ // juste mettre à 0 les scores
   display.showNumberDec(Score_Joueur_1,false,1,0);
 }
 
-void Add_Joueur_1()
+void Add_Joueur_1() // ajouter 1 point en mode combat
 {
   alarm(); /* car si touchee, il faut emmettre un bip */
   Display_off();
@@ -583,6 +646,10 @@ void Add_Joueur_1()
     Display_End();
   }
 }
+
+
+//*********************************************************************************************************************************************************************
+
 
 void setup()
 {
