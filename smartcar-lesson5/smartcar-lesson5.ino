@@ -7,7 +7,7 @@ Servo head;
 #define DIO A3 //can be any digital pin
 TM1637Display display(CLK, DIO);
 
-int Nb_Capteur;
+int Nb_Capteur = 0;
 int Score_Joueur_1;
 
 char Uart_Date=0;
@@ -16,6 +16,7 @@ bool wait = true; // pour afficher la boucle du debut
 bool wait_emmetteur = false; // pour afficher la boucle et le nombre de emmetteur active
 bool capteur_depassement = false; // pour activer les capteurs du dessous
 bool capteur_active = false; 
+bool mode_activee = false;
 
 uint8_t data[] = {0x0, 0x0, 0x0, 0x0};
 
@@ -332,7 +333,7 @@ void do_Drive_Tick()
           stop_Stop();
           JogTime = 0;
           break;
-      case MODE_COMBAT:
+      case MODE_COMBAT:          
           Display_Start();
           stop_Stop();
           JogTime=0;
@@ -569,9 +570,12 @@ void Display_Wait(int timeloop)
 //****************************** Lancement Partie en Mode Combat *********************************
 void Display_Start() // lancer une partie de combat avec les règles (depassement ligne)
 {
+  mode_activee = true;
   wait = false;
   capteur_depassement = true;
 
+  IREmitterOn();
+  
   if(capteur_active == true){
     Nb_Capteur = 1;
   }
@@ -601,6 +605,7 @@ void Display_Start() // lancer une partie de combat avec les règles (depassemen
 
 // ********************************* Fin de la Partie en mode combat ******************************
 void Display_End(){
+  mode_activee = false;
   Serial.println("Terminee");
   for (int i = 0; i < 3; i++)
   {
