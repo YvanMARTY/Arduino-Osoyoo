@@ -16,7 +16,6 @@ bool wait = true; // pour afficher la boucle du debut
 bool wait_emmetteur = false; // pour afficher la boucle et le nombre de emmetteur active
 bool capteur_depassement = false; // pour activer les capteurs du dessous
 bool capteur_active = false; 
-bool mode_activee = false;
 
 uint8_t data[] = {0x0, 0x0, 0x0, 0x0};
 
@@ -136,8 +135,9 @@ void do_Uart_Tick()
     case 'K':Drive_Status=MANUAL_DRIVE; Drive_Num=ACTIVE; Serial.println("Activer Emmetteur");break;
     case 'Y':Drive_Status=MANUAL_DRIVE; Drive_Num=DESACTIVE; Serial.println("Desactiver Emmetteur");break;
     case 'R':Init_Score(); Serial.println("Réinitialiser le score");break;
-    case 'F':Display_End(); Serial.println("Temps ecoule");break;
-   
+    case 'F':Display_End_Temps(); Serial.println("Temps ecoule");break;
+    // case 'F':Display_End(); Serial.println("Temps ecoule");break;
+    
     default:break;
   }
   do_IR_Tick();
@@ -249,7 +249,7 @@ void IREmitterOn(){
   // pause(10);
   digitalWrite(IR_em, HIGH);
   alarm();
-  Serial.println("led active"); 
+  Serial.println("led activee"); 
 }
 /*
  * Fonction de mise OFF  l'emetteur IR
@@ -260,7 +260,7 @@ void IREmitterOff(){
   // pause(60);
   digitalWrite(IR_em, LOW);
   alarm();
-  Serial.println("led desactive"); 
+  Serial.println("led desactivee"); 
 }
 
 void switchOffOnIREmitter() { 
@@ -570,8 +570,8 @@ void Display_Wait(int timeloop)
 //****************************** Lancement Partie en Mode Combat *********************************
 void Display_Start() // lancer une partie de combat avec les règles (depassement ligne)
 {
-  mode_activee = true;
   wait = false;
+  wait_emmetteur = false;
   capteur_depassement = true;
 
   IREmitterOn();
@@ -605,8 +605,25 @@ void Display_Start() // lancer une partie de combat avec les règles (depassemen
 
 // ********************************* Fin de la Partie en mode combat ******************************
 void Display_End(){
-  mode_activee = false;
   Serial.println("Terminee");
+  for (int i = 0; i < 3; i++)
+  {
+    Display_on();
+    buzz_ON();
+    delay(500);
+    buzz_OFF();
+    Display_off();
+    delay(500);
+  }
+  buzz_ON();
+  delay(600);
+  buzz_OFF();
+  
+  wait = true;
+  capteur_depassement = false;
+}
+
+void Display_End_Temps(){ //  temps ecoulee -> temps ecoulee
   for (int i = 0; i < 3; i++)
   {
     Display_on();
@@ -647,14 +664,13 @@ void Add_Joueur_1() // ajouter 1 point en mode combat
   Display_Center();
   display.showNumberDec(Score_Joueur_1,false,1,0);
 
-  if(Score_Joueur_1 > 3){
+  if(Score_Joueur_1 > 9){
     Display_End();
   }
 }
 
 
 //*********************************************************************************************************************************************************************
-
 
 void setup()
 {
